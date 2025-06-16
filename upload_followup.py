@@ -5,7 +5,7 @@ import datetime
 import itertools # Import untuk fungsi cycle
 
 st.title("📞 Otomatisasi Follow-Up dan Pembagian Tele (Multi-File)")
-st.write("Upload file Excel 'master baru' (dengan `_baru` di nama file) dan/atau file-file Excel lama Anda.")
+st.write("Upload file Excel dengan `_baru` di nama file dan file Excel lama.")
 
 today_date = datetime.date.today()
 
@@ -39,12 +39,7 @@ def hitung_tgl_fu(row):
         return (pd.to_datetime(row["TGL"]) + pd.Timedelta(days=int(row["FollowUp(Hari)"]))).date()
 
 def assign_tele_baru(df_to_assign, nama_tele_baru):
-    """
-    Menetapkan TELE_BARU berdasarkan preferensi kecocokan dengan TELE_LAMA,
-    lalu secara round-robin untuk baris yang belum ditetapkan.
-    Fungsi ini paling cocok untuk data follow-up lama yang ingin diprioritaskan
-    ke tele yang sama.
-    """
+
     if df_to_assign.empty or not nama_tele_baru:
         if "TELE_BARU" not in df_to_assign.columns: # Pastikan kolom ada sebelum mencoba mengisinya
             df_to_assign["TELE_BARU"] = "N/A"
@@ -68,7 +63,7 @@ def assign_tele_baru(df_to_assign, nama_tele_baru):
         for idx in unassigned_indices:
             df_to_assign.loc[idx, "TELE_BARU"] = next(tele_iterator)
 
-    df_to_assign["TELE_BARU"].fillna("N/A", inplace=True) # Pastikan semua terisi
+    df_to_assign["TELE_BARU"].fillna("N/A", inplace=True)
     
     return df_to_assign
 
@@ -80,15 +75,15 @@ if uploaded_files:
     jumlah_tele = st.number_input("Jumlah Tele Baru", min_value=1, value=2, step=1,
                                   help="Masukkan berapa banyak tele baru yang akan menerima data follow-up.")
     nama_tele_baru = [st.text_input(f"Nama Tele Baru {i+1}", value=f"Tele_{i+1}") for i in range(jumlah_tele)]
-    nama_tele_baru.sort() # Mengurutkan nama tele baru secara alfabetis
+    nama_tele_baru.sort()
 
     proses = st.button("🚀 Proses Semua File")
 
     if proses:
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            nama_sheet_tele_lama = [] # Menyimpan nama sheet dari file lama yang diunggah
-            df_parts_lama = [] # Menyimpan bagian DataFrame dari file lama untuk digabungkan
+            nama_sheet_tele_lama = [] 
+            df_parts_lama = []
 
             # Tahap 1: Memproses semua file yang diunggah
             for file in uploaded_files:
@@ -131,17 +126,10 @@ if uploaded_files:
                     df_fu_only["TELE_BARU"] = [next(tele_baru_iterator) for _ in range(len(df_fu_only))]
                 else:
                     df_fu_only["TELE_BARU"] = "N/A"
-                
-                # Tambahkan TELE_BARU ke df_master (sebelum digabung) agar terupdate di sheet "Data_Terproses_Baru"
-                # Pastikan kolom sudah ada di df_master
+
                 if "TELE_BARU" not in df_master.columns:
                     df_master["TELE_BARU"] = "N/A" # Inisialisasi jika belum ada
-                
-                # Update TELE_BARU di df_master berdasarkan hasil df_fu_only
-                # Ini sedikit rumit karena df_fu_only dan df_tidak_fu adalah subset
-                # Cara terbaik adalah menggabungkan kembali dan kemudian menyimpan
-                
-                # Pastikan kolom TELE_BARU ada di df_tidak_fu juga, akan diisi None (atau N/A)
+
                 if "TELE_BARU" not in df_tidak_fu.columns:
                     df_tidak_fu["TELE_BARU"] = None # Atau "N/A" jika prefer
                 else:
@@ -175,10 +163,6 @@ if uploaded_files:
                     # TELE_BARU sudah diset None saat pembentukan df_tidak_fu di atas jika belum ada
                     df_tidak_fu.to_excel(writer, sheet_name="Tidak Bisa FU", index=False)
 
-            # === FOLLOW-UP LAMA SAJA ===
-            # Logika ini akan berjalan jika ada df_parts_lama.
-            # Jika ada file_baru juga, ini akan memproses file_lama secara terpisah.
-            # Jika hanya ada file_lama, ini adalah satu-satunya jalur pemrosesan data FU.
             elif df_parts_lama: 
                 df_lanjutan = pd.concat(df_parts_lama, ignore_index=True)
                 df_lanjutan["RESULT"] = df_lanjutan["RESULT"].astype(str).str.strip().str.title()
