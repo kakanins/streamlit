@@ -5,8 +5,8 @@ import pandas as pd
 from io import BytesIO
 import datetime
 
-st.title("📞 Otomatisasi Follow-Up (File Lama Saja)")
-st.write("Upload file Excel lama Anda (mis. hasil harian tele).")
+st.title("📞 Otomatisasi Follow-Up")
+st.write("Upload hasil followup.")
 
 today_date = datetime.date.today()
 
@@ -27,9 +27,7 @@ mapping_fu = {
 }
 
 def hitung_tgl_fu(row):
-    """
-    Menghitung tanggal follow-up berdasarkan kolom 'RESULT' dan 'FollowUp(Hari)'.
-    """
+
     if pd.isnull(row["FollowUp(Hari)"]):
         return pd.NaT # Not a Time, untuk nilai yang tidak perlu follow-up
     elif row["FollowUp(Hari)"] == "Next Month":
@@ -40,8 +38,6 @@ def hitung_tgl_fu(row):
         return (pd.to_datetime(row["TGL"]) + pd.Timedelta(days=int(row["FollowUp(Hari)"]))).date()
 
 if uploaded_files:
-    # Dalam skenario ini, kita asumsikan semua file adalah 'file_lama'
-    # Tidak perlu memisahkan berdasarkan '_baru' di sini.
     
     jumlah_tele = st.number_input("Jumlah Tele Baru", min_value=1, value=2, step=1, 
                                   help="Masukkan berapa banyak tele baru yang akan menerima data follow-up.")
@@ -55,18 +51,12 @@ if uploaded_files:
             df_parts_lama = []
             nama_sheet_tele_lama_list = [] # List untuk menyimpan nama sheet dari file lama
 
-            # Loop melalui setiap file yang diunggah
             for file in uploaded_files:
                 xls = pd.ExcelFile(file)
-                # Loop melalui setiap sheet dalam file Excel
                 for sheet_name in xls.sheet_names:
                     df = xls.parse(sheet_name)
-                    
-                    # Tulis DataFrame asli ke output tanpa modifikasi
-                    # Ini untuk memastikan sheet asli tetap ada dan bersih
                     df.to_excel(writer, sheet_name=sheet_name, index=False) 
                     
-                    # Buat salinan DataFrame untuk pemrosesan lebih lanjut
                     df_copy = df.copy() 
                     df_copy["TELE_LAMA"] = sheet_name # Tambahkan kolom TELE_LAMA berdasarkan nama sheet
                     df_copy["Tanggal Upload"] = today_date # Tambahkan kolom Tanggal Upload
